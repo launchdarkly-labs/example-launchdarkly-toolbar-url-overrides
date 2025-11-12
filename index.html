@@ -157,6 +157,32 @@
         .form-group button:active {
             background-color: #1f34bb;
         }
+        .form-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+            cursor: pointer;
+        }
+        .form-group select:focus {
+            outline: none;
+            border-color: #405BFF;
+            box-shadow: 0 0 0 2px rgba(64, 91, 255, 0.1);
+        }
+        .reload-notice {
+            display: none;
+            color: #FF9800;
+            font-size: 0.9em;
+            margin-top: 5px;
+            padding: 8px;
+            background-color: #FFF3E0;
+            border-radius: 4px;
+            border-left: 3px solid #FF9800;
+        }
+        .reload-notice.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -169,6 +195,17 @@
                 <label for="clientSideId">Client-Side ID:</label>
                 <input type="text" id="clientSideId" name="clientSideId" placeholder="Enter your LaunchDarkly client-side ID" />
                 <button type="submit">Load SDK</button>
+            </div>
+            <div class="form-group">
+                <label for="clearMode">Override Behavior:</label>
+                <select id="clearMode" name="clearMode">
+                    <option value="auto">Clear all existing local overrides when overrides are set in the URL</option>
+                    <option value="explicit">Only clear local overrides when URL includes ld_override__clear</option>
+                    <option value="always">Only use URL overrides, ignore local storage</option>
+                </select>
+                <div id="clearModeNotice" class="reload-notice">
+                    Setting updated. Click "Load SDK" to apply changes.
+                </div>
             </div>
         </form>
     </div>

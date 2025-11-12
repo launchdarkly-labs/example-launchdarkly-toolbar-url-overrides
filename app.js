@@ -1,6 +1,11 @@
 import * as LDClient from 'launchdarkly-js-client-sdk';
 import { EventInterceptionPlugin } from '@launchdarkly/toolbar';
-import { createFlagUrlOverridePlugin } from './flag-url-override-plugin.js';
+import {
+    createFlagUrlOverridePlugin,
+    CLEAR_MODE_EXPLICIT,
+    CLEAR_MODE_ALWAYS,
+    CLEAR_MODE_AUTO
+} from './flag-url-override-plugin.js';
 
 // Custom Logger Implementation
 class CustomLogger {
@@ -54,6 +59,21 @@ const logger = new CustomLogger('logs-container');
 function getClientSideIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('clientSideId') || '';
+}
+
+// Get clear mode from query parameter and map to symbol
+function getClearModeFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const clearModeStr = urlParams.get('clearMode') || 'auto';
+
+    // Map string to symbol
+    const modeMap = {
+        'auto': CLEAR_MODE_AUTO,
+        'explicit': CLEAR_MODE_EXPLICIT,
+        'always': CLEAR_MODE_ALWAYS
+    };
+
+    return modeMap[clearModeStr] || CLEAR_MODE_AUTO;
 }
 
 // Helper function to format reason object
@@ -157,8 +177,11 @@ async function initializeLaunchDarkly(clientSideID) {
     logger.info('Initializing LaunchDarkly client...');
 
     // Create plugin instances that will be shared between client and toolbar
+    // Get clearMode from URL (defaults to AUTO for reliable URL sharing)
+    const clearMode = getClearModeFromUrl();
     const flagOverridePlugin = createFlagUrlOverridePlugin({
         parameterPrefix: 'ld_override_',
+        clearMode: clearMode,
         overrideOptions: {},
         logger: logger
     });
@@ -233,10 +256,32 @@ function initApp() {
     // Get client-side ID from URL
     const clientSideId = getClientSideIdFromUrl();
 
-    // Populate the form input with the current value
-    const input = document.getElementById('clientSideId');
-    if (input) {
-        input.value = clientSideId;
+    // Populate the form inputs with current values
+    const clientIdInput = document.getElementById('clientSideId');
+    if (clientIdInput) {
+        clientIdInput.value = clientSideId;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const clearModeSelect = document.getElementById('clearMode');
+    const clearModeNotice = document.getElementById('clearModeNotice');
+
+    if (clearModeSelect) {
+        const clearModeStr = urlParams.get('clearMode') || 'auto';
+        clearModeSelect.value = clearModeStr;
+
+        // Add change listener to update URL when clearMode changes
+        clearModeSelect.addEventListener('change', (e) => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('clearMode', e.target.value);
+            window.history.replaceState({}, '', url.toString());
+            logger.info(`Clear mode changed to: ${e.target.value}`);
+
+            // Show notice to reload
+            if (clearModeNotice) {
+                clearModeNotice.classList.add('visible');
+            }
+        });
     }
 
     // Initialize LaunchDarkly if clientSideId is provided
