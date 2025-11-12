@@ -47,10 +47,13 @@ A simple HTML5 application that provides a visual interface for viewing and mana
    https://your-github-username.github.io/repo-name/
    ```
 
-2. **Enter your LaunchDarkly Client-Side ID**
-   - Paste your client-side ID in the configuration form
-   - Click "Load SDK"
-   - The SDK will initialize and display all your flags
+2. **Configure the Application**
+   - **Client-Side ID**: Paste your LaunchDarkly client-side ID
+   - **Override Behavior**: Choose how URL overrides interact with local storage:
+     - *Auto* (default) - When the URL contains overrides, clear any overrides not present in the URL
+     - *Explicit* - Only clear existing local overrides when URL includes `ld_override__clear`. 
+     - *Always* - Always clears local storage and then loads overrides from the URL. Effectively ignores local storage.
+   - Click "Load SDK" to initialize
 
 3. **View and Override Flags**
    - All flags are displayed with their current values
@@ -79,6 +82,66 @@ Values are JSON-encoded, supporting:
 - Numbers: `42`, `3.14`
 - Strings: `"hello"`
 - JSON objects: `{"key":"value"}`
+
+### Advanced Override Control
+
+**Automatic localStorage clearing** (default behavior): When you share a URL with override parameters, existing overrides from localStorage are **automatically cleared** first. This ensures shared URLs work reliably - recipients see exactly the flag configuration you intended.
+
+**Example:**
+```
+?clientSideId=abc&ld_override_feature=true&ld_override_theme=dark
+```
+When someone opens this URL, their existing localStorage overrides are cleared first, then your overrides are applied. This prevents conflicts and ensures predictable behavior.
+
+**Additional control options:**
+
+**Explicit clear flag:**
+```
+?ld_override__clear&ld_override_my-flag=value
+```
+Add `ld_override__clear` (just needs to be present) to explicitly signal clearing. This works regardless of clear mode settings.
+
+**Remove specific overrides:**
+```
+?ld_override_old-flag=&ld_override_new-flag=value
+```
+Use an empty value (e.g., `ld_override_flagname=`) to explicitly remove a specific flag's override while keeping others.
+
+**Configuring clear behavior:**
+
+Clear mode can be set in two ways:
+
+1. **Via UI Dropdown** (easiest): Select the "Override Behavior" option in the configuration form
+   - Changes are saved to the URL as `?clearMode=auto/explicit/always`
+   - Click "Load SDK" to apply changes
+
+2. **Via URL Parameter**: Add `?clearMode=auto` to the URL
+   ```
+   ?clientSideId=abc&clearMode=explicit&ld_override_feature=true
+   ```
+
+3. **Via Code** (advanced): Configure in `app.js` when creating the plugin
+   ```javascript
+   import { createFlagUrlOverridePlugin, CLEAR_MODE_AUTO } from './flag-url-override-plugin.js';
+
+   const plugin = createFlagUrlOverridePlugin({
+     clearMode: CLEAR_MODE_AUTO,  // default: auto-clear when URL has overrides
+     // clearMode: CLEAR_MODE_EXPLICIT,  // only clear if ld_override__clear present
+     // clearMode: CLEAR_MODE_ALWAYS,    // always clear, even without URL overrides
+   });
+   ```
+
+**Clear modes:**
+- **Auto** (default) - Auto-clear localStorage when URL has override parameters
+  - URL: `clearMode=auto` → Plugin: `CLEAR_MODE_AUTO`
+- **Explicit** - Only clear if `ld_override__clear` is present
+  - URL: `clearMode=explicit` → Plugin: `CLEAR_MODE_EXPLICIT`
+- **Always** - Always clear localStorage before loading overrides
+  - URL: `clearMode=always` → Plugin: `CLEAR_MODE_ALWAYS`
+
+**Note:** The plugin API requires symbol values (`CLEAR_MODE_AUTO`), not strings. The application automatically converts URL string parameters to symbols.
+
+**Note:** The double underscore in `_clear` prevents conflicts with flag names (flags cannot start with underscore).
 
 ## Architecture
 
